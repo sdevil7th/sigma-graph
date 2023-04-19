@@ -8,6 +8,32 @@ import {
   RawTagData,
 } from "./types";
 
+import ChartType from "../assets/images/charttype.svg";
+import Company from "../assets/images/company.svg";
+import Concept from "../assets/images/concept.svg";
+import Field from "../assets/images/field.svg";
+import List from "../assets/images/list.svg";
+import Method from "../assets/images/method.svg";
+import Organization from "../assets/images/organization.svg";
+import Person from "../assets/images/person.svg";
+import Technology from "../assets/images/technology.svg";
+import Tool from "../assets/images/tool.svg";
+import Unknown from "../assets/images/unknown.svg";
+
+const tagsIconMap: { [key: string]: string } = {
+  "charttype.svg": ChartType,
+  "company.svg": Company,
+  "concept.svg": Concept,
+  "field.svg": Field,
+  "list.svg": List,
+  "method.svg": Method,
+  "organization.svg": Organization,
+  "person.svg": Person,
+  "technology.svg": Technology,
+  "tool.svg": Tool,
+  "unknown.svg": Unknown,
+};
+
 export const formatRawGraphData = (
   graphData: RawGraphDataType
 ): FormattedGraphData => {
@@ -26,7 +52,7 @@ export const formatRawGraphData = (
         ...node,
         color: clusters[node.cluster].color,
         clusterLabel: clusters[node.cluster].clusterLabel,
-        image: `src/assets/images/${tags[node.tag].image}`,
+        image: tagsIconMap[tags[node.tag].image],
         size: Number(node.score) * 500,
       },
     };
