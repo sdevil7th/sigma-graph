@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { RefObject, useEffect, useMemo, useRef, useState } from "react";
 
 import Graph from "graphology";
 import getNodeProgramImage from "sigma/rendering/webgl/programs/node.image";
@@ -29,6 +29,9 @@ const GraphContainer: React.FC<{}> = () => {
   const graph = Graph.from(formattedGraphData as any);
   const [sigma, setSigma] = useState<Sigma | null>(null);
 
+  const contextMenuRef: RefObject<HTMLDivElement> = useRef(null);
+  const [contextMenuContent, setContextMenuContent] = useState<string>("");
+
   const [clusterPositions, setClusterPositions] =
     useState<ClusterPositionsData>({});
 
@@ -40,20 +43,34 @@ const GraphContainer: React.FC<{}> = () => {
     return newClusters;
   }, [initialGraphData]);
 
-  useEffect(() => {
-    if (graph && isEmpty(clusterPositions)) {
-      const newClusterPositions: ClusterPositionsData = {};
-      graph.forEachNode((node, atts) => {
-        // store cluster's nodes positions to calculate cluster label position
-        if (newClusterPositions[atts.cluster]?.length) {
-          newClusterPositions[atts.cluster].push({ x: atts.x, y: atts.y });
-        } else {
-          newClusterPositions[atts.cluster] = [{ x: atts.x, y: atts.y }];
-        }
-      });
-      setClusterPositions(newClusterPositions);
+  const onNodeRightClick = (node: string, event: any) => {
+    setContextMenuContent(node);
+    if (contextMenuRef && contextMenuRef.current) {
+      console.log(event);
+      contextMenuRef.current.style.left = event.x + "px";
+      contextMenuRef.current.style.top = event.y + "px";
+      contextMenuRef.current.style.display = "block";
+      // Add a click listener to hide the context menu on click outside
+      document.addEventListener("click", hideContextMenu);
     }
-  }, [graph]);
+  };
+
+  const hideContextMenu = () => {
+    if (contextMenuRef && contextMenuRef.current) {
+      contextMenuRef.current.style.display = "none";
+      document.removeEventListener("click", hideContextMenu);
+    }
+  };
+
+  const initEventListeners = () => {
+    if (sigma) {
+      sigma?.addListener("rightClickNode", function (event) {
+        event.event.original.preventDefault();
+        event.preventSigmaDefault();
+        onNodeRightClick(event.node, event.event);
+      });
+    }
+  };
 
   const initClusters = () => {
     if (sigma) {
@@ -105,39 +122,61 @@ const GraphContainer: React.FC<{}> = () => {
   };
 
   useEffect(() => {
+    if (graph && isEmpty(clusterPositions)) {
+      const newClusterPositions: ClusterPositionsData = {};
+      graph.forEachNode((node, atts) => {
+        // store cluster's nodes positions to calculate cluster label position
+        if (newClusterPositions[atts.cluster]?.length) {
+          newClusterPositions[atts.cluster].push({ x: atts.x, y: atts.y });
+        } else {
+          newClusterPositions[atts.cluster] = [{ x: atts.x, y: atts.y }];
+        }
+      });
+      setClusterPositions(newClusterPositions);
+    }
+
     if (sigma && graph && firstInitFlag) {
       setFirstInitFlag(false);
       sigma?.setGraph(graph);
       initClusters();
+      initEventListeners();
     }
   }, [graph]);
 
   return (
-    <SigmaContainer
-      className="relative"
-      ref={setSigma}
-      settings={{
-        nodeProgramClasses: { image: getNodeProgramImage() },
-        defaultNodeType: "image",
-        defaultEdgeType: "arrow",
-        labelDensity: 0.07,
-        labelGridCellSize: 60,
-        labelRenderedSizeThreshold: 15,
-        labelFont: "Lato, sans-serif",
-        zIndex: true,
-      }}
-    >
-      <ControlsContainer position={"bottom-right"}>
-        <ZoomControl />
-        <hr />
-        <FullScreenControl />
-        <hr />
-        <LayoutForceAtlas2Control />
-      </ControlsContainer>
-      <ControlsContainer position={"top-right"}>
-        <SearchControl className="w-[200px]" />
-      </ControlsContainer>
-    </SigmaContainer>
+    <>
+      <SigmaContainer
+        className="relative"
+        ref={setSigma}
+        settings={{
+          nodeProgramClasses: { image: getNodeProgramImage() },
+          defaultNodeType: "image",
+          defaultEdgeType: "arrow",
+          labelDensity: 0.07,
+          labelGridCellSize: 60,
+          labelRenderedSizeThreshold: 15,
+          labelFont: "Lato, sans-serif",
+          zIndex: true,
+        }}
+      >
+        <ControlsContainer position={"bottom-right"}>
+          <ZoomControl />
+          <hr />
+          <FullScreenControl />
+          <hr />
+          <LayoutForceAtlas2Control />
+        </ControlsContainer>
+        <ControlsContainer position={"top-right"}>
+          <SearchControl className="w-[200px]" />
+        </ControlsContainer>
+      </SigmaContainer>
+      <div
+        ref={contextMenuRef}
+        className="hidden absolute p-2 bg-black color-white rounded-lg"
+      >
+        {contextMenuContent}
+      </div>
+    </>
   );
 };
 
